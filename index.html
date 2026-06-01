@@ -13,7 +13,7 @@
     min-height: 100vh;
   }
 
-  /* ── TOOLBAR NAVIGATION SEULE ── */
+  /* ── TOOLBAR ── */
   .toolbar {
     position: sticky;
     top: 0;
@@ -38,7 +38,6 @@
     cursor: pointer;
     transition: background 0.1s, border-color 0.1s;
   }
-
   .tbtn:hover { background: #f5f5f5; border-color: #bbb; }
 
   .pg-sep {
@@ -62,7 +61,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem 1rem 5rem;
+    padding: 2rem 1rem 0;
     gap: 2rem;
   }
 
@@ -71,13 +70,8 @@
     position: relative;
     background: white;
     box-shadow: 0 3px 20px rgba(0,0,0,0.15);
-    /* Le canvas est rendu à devicePixelRatio×, on le rétrecit via CSS */
   }
-
-  .page-block canvas {
-    display: block;
-    /* width/height CSS = taille d'affichage (≠ résolution interne) */
-  }
+  .page-block canvas { display: block; }
 
   /* ── HOTSPOT ── */
   .hs {
@@ -87,7 +81,6 @@
     border-radius: 3px;
     transition: background 0.12s;
   }
-
   .hs:hover { background: rgba(0,160,140,0.18) !important; }
 
   .hs-tip {
@@ -107,8 +100,42 @@
     transition: opacity 0.15s;
     z-index: 20;
   }
-
   .hs:hover .hs-tip { opacity: 1; }
+
+  /* ── BOUTON RÉFÉRENCES ── */
+  #ref-section {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 2.5rem 0 0;
+  }
+
+  #btn-ref {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.5rem 1.6rem;
+    font-size: 0.85rem;
+    font-family: system-ui, sans-serif;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    margin-bottom: 2rem;
+  }
+  #btn-ref:hover { background: #f5f5f5; border-color: #aaa; }
+
+  /* ── IMAGE RÉFÉRENCES — fond de page, sans effet ── */
+  #ref-img-wrap {
+    display: none;
+    width: 100%;
+  }
+
+  #ref-img-wrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
 
   /* ── LOADING ── */
   #loading {
@@ -130,7 +157,6 @@
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
@@ -155,13 +181,20 @@
   </div>
 </div>
 
+<!-- ══ SECTION RÉFÉRENCES ══ -->
+<div id="ref-section">
+  <button id="btn-ref" onclick="toggleRef()">Références</button>
+  <div id="ref-img-wrap">
+    <img id="ref-img" src="reference.jpg" alt="Références">
+  </div>
+</div>
+
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const PDF_URL = 'Wedoo-motion-nl-doc1.pdf';
 
-// ─── HOTSPOTS ────────────────────────────────────────────────────────────────
 const HOTSPOTS = [
   // PAGE 1 — Bouton DÉCOUVRIR rouge (procès Brancusi)
   {
@@ -189,13 +222,10 @@ const HOTSPOTS = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 let pdfDoc = null;
-// Échelle de base × devicePixelRatio pour rendu haute résolution
-// On vise ~900px de large affiché ; le canvas interne sera 2× ou 3× selon l'écran
-const BASE_DISPLAY_WIDTH = 900; // px affiché dans le navigateur
-let zoomFactor = 1.0;           // modifié par les boutons
+const BASE_DISPLAY_WIDTH = 900;
+let zoomFactor = 1.0;
+let refOpen = false;
 
 async function init() {
   try {
@@ -220,37 +250,29 @@ async function renderAll() {
   const dpr = window.devicePixelRatio || 1;
 
   for (let i = 1; i <= pdfDoc.numPages; i++) {
-    const page     = await pdfDoc.getPage(i);
-    // Calcul de l'échelle : on veut BASE_DISPLAY_WIDTH * zoomFactor px affichés,
-    // mais on rend en interne à dpr× pour avoir un rendu net
+    const page       = await pdfDoc.getPage(i);
     const vpNatural  = page.getViewport({ scale: 1 });
     const displayW   = BASE_DISPLAY_WIDTH * zoomFactor;
     const cssScale   = displayW / vpNatural.width;
     const renderScale = cssScale * dpr;
-
     const vp = page.getViewport({ scale: renderScale });
 
-    // Bloc — taille CSS = taille affichée
     const block = document.createElement('div');
     block.className = 'page-block';
     block.id = `p${i}`;
     block.style.width  = (vp.width  / dpr) + 'px';
     block.style.height = (vp.height / dpr) + 'px';
 
-    // Canvas — résolution interne haute densité
     const canvas = document.createElement('canvas');
     canvas.width  = vp.width;
     canvas.height = vp.height;
-    // On le force à la taille CSS pour que le navigateur le downscale proprement
     canvas.style.width  = (vp.width  / dpr) + 'px';
     canvas.style.height = (vp.height / dpr) + 'px';
     block.appendChild(canvas);
     viewer.appendChild(block);
 
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
 
-    // Hotspots
     HOTSPOTS.filter(h => h.page === i).forEach(h => {
       const el = document.createElement('div');
       el.className = 'hs';
@@ -273,7 +295,19 @@ async function renderAll() {
     });
   }
 
+  // Afficher la section références après les pages
+  document.getElementById('ref-section').style.display = 'flex';
+
   updateCounter();
+}
+
+function toggleRef() {
+  refOpen = !refOpen;
+  const wrap = document.getElementById('ref-img-wrap');
+  const btn  = document.getElementById('btn-ref');
+  wrap.style.display = refOpen ? 'block' : 'none';
+  btn.textContent    = refOpen ? 'Masquer les références' : 'Références';
+  if (refOpen) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function updateCounter() {
