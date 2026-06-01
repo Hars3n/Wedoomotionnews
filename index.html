@@ -148,6 +148,10 @@
     bottom: 1rem;
     right: 1rem;
     z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
   }
 
   #debug-btn {
@@ -159,11 +163,93 @@
     font-size: 0.72rem;
     font-family: 'Lato', sans-serif;
     cursor: pointer;
-    opacity: 0.55;
+    opacity: 0.7;
     transition: opacity 0.15s;
   }
 
   #debug-btn:hover { opacity: 1; }
+
+  /* ── PANNEAU COORDONNÉES ── */
+  #coord-panel {
+    display: none;
+    background: #111;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    min-width: 230px;
+    line-height: 1.8;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  #coord-panel.visible { display: block; }
+
+  #coord-panel .cp-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  #coord-panel .cp-label { color: #F08C00; }
+  #coord-panel .cp-val   { color: #fff; font-weight: bold; }
+
+  #coord-panel .cp-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    margin: 0.4rem 0;
+  }
+
+  #coord-panel .cp-hint {
+    color: #666;
+    font-size: 0.65rem;
+    margin-top: 0.4rem;
+    font-family: 'Lato', sans-serif;
+  }
+
+  #coord-panel .cp-copy {
+    display: block;
+    width: 100%;
+    margin-top: 0.6rem;
+    background: rgba(255,140,0,0.15);
+    border: 1px solid rgba(255,140,0,0.4);
+    border-radius: 4px;
+    color: #F08C00;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.68rem;
+    padding: 0.3rem;
+    cursor: pointer;
+    transition: background 0.1s;
+    text-align: center;
+  }
+
+  #coord-panel .cp-copy:hover { background: rgba(255,140,0,0.28); }
+
+  /* Crosshair quand debug actif */
+  body.debug-mode .page-block { cursor: crosshair; }
+
+  /* Réticule live */
+  #crosshair-h, #crosshair-v {
+    position: fixed;
+    pointer-events: none;
+    z-index: 500;
+    display: none;
+  }
+
+  #crosshair-h {
+    height: 1px;
+    left: 0; right: 0;
+    background: rgba(255,140,0,0.5);
+  }
+
+  #crosshair-v {
+    width: 1px;
+    top: 0; bottom: 0;
+    background: rgba(255,140,0,0.5);
+  }
+
+  body.debug-mode #crosshair-h,
+  body.debug-mode #crosshair-v { display: block; }
 </style>
 </head>
 <body>
@@ -189,8 +275,23 @@
   </div>
 </div>
 
+<!-- Réticule -->
+<div id="crosshair-h"></div>
+<div id="crosshair-v"></div>
+
 <!-- ══ DEBUG ══ -->
 <div id="debug-bar">
+  <div id="coord-panel">
+    <div class="cp-row"><span class="cp-label">Page</span><span class="cp-val" id="cp-page">—</span></div>
+    <hr class="cp-divider">
+    <div class="cp-row"><span class="cp-label">x (gauche)</span><span class="cp-val" id="cp-x">—</span></div>
+    <div class="cp-row"><span class="cp-label">y (haut)</span><span class="cp-val" id="cp-y">—</span></div>
+    <hr class="cp-divider">
+    <div class="cp-row" id="cp-drag-row" style="display:none"><span class="cp-label">w (largeur)</span><span class="cp-val" id="cp-w">—</span></div>
+    <div class="cp-row" id="cp-drag-row2" style="display:none"><span class="cp-label">h (hauteur)</span><span class="cp-val" id="cp-h">—</span></div>
+    <p class="cp-hint">↖ Survole pour x,y · Clique-glisse pour w,h</p>
+    <button class="cp-copy" id="cp-copy-btn" onclick="copyCoords()">Copier comme hotspot</button>
+  </div>
   <button id="debug-btn" onclick="toggleDebug()">Afficher zones</button>
 </div>
 
@@ -378,9 +479,103 @@ async function doZoom(delta) {
 function toggleDebug() {
   debugOn = !debugOn;
   document.getElementById('debug-btn').textContent = debugOn ? 'Masquer zones' : 'Afficher zones';
+  document.getElementById('coord-panel').classList.toggle('visible', debugOn);
+  document.body.classList.toggle('debug-mode', debugOn);
+
   document.querySelectorAll('.hs').forEach(el => {
     el.style.background = debugOn ? 'rgba(255,140,0,0.12)' : 'transparent';
     el.style.outline    = debugOn ? '1.5px dashed rgba(255,140,0,0.45)' : 'none';
+  });
+
+  if (debugOn) attachTrackers();
+  else detachTrackers();
+}
+
+// ── Suivi coordonnées ─────────────────────────────────────────────────────────
+
+let dragStart = null;
+let lastCoords = { page: null, x: 0, y: 0, w: 0, h: 0 };
+
+function getPageCoords(e) {
+  const blocks = document.querySelectorAll('.page-block');
+  for (let i = 0; i < blocks.length; i++) {
+    const b   = blocks[i];
+    const r   = b.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right &&
+        e.clientY >= r.top  && e.clientY <= r.bottom) {
+      const xPct = ((e.clientX - r.left) / r.width  * 100);
+      const yPct = ((e.clientY - r.top)  / r.height * 100);
+      return { page: i + 1, x: xPct, y: yPct, block: b };
+    }
+  }
+  return null;
+}
+
+function fmt(v) { return v.toFixed(1); }
+
+function onMouseMove(e) {
+  // Réticule
+  document.getElementById('crosshair-h').style.top  = e.clientY + 'px';
+  document.getElementById('crosshair-v').style.left = e.clientX + 'px';
+
+  const c = getPageCoords(e);
+  if (!c) return;
+
+  document.getElementById('cp-page').textContent = `Page ${c.page}`;
+  document.getElementById('cp-x').textContent    = fmt(c.x) + ' %';
+  document.getElementById('cp-y').textContent    = fmt(c.y) + ' %';
+  lastCoords.page = c.page;
+  lastCoords.x    = parseFloat(fmt(c.x));
+  lastCoords.y    = parseFloat(fmt(c.y));
+
+  // Si on est en train de glisser, afficher w/h
+  if (dragStart && dragStart.page === c.page) {
+    const w = Math.abs(c.x - dragStart.x);
+    const h = Math.abs(c.y - dragStart.y);
+    document.getElementById('cp-w').textContent = fmt(w) + ' %';
+    document.getElementById('cp-h').textContent = fmt(h) + ' %';
+    lastCoords.w = parseFloat(fmt(w));
+    lastCoords.h = parseFloat(fmt(h));
+  }
+}
+
+function onMouseDown(e) {
+  if (!debugOn) return;
+  const c = getPageCoords(e);
+  if (!c) return;
+  dragStart = { page: c.page, x: c.x, y: c.y };
+  document.getElementById('cp-drag-row').style.display  = 'flex';
+  document.getElementById('cp-drag-row2').style.display = 'flex';
+  document.getElementById('cp-w').textContent = '0 %';
+  document.getElementById('cp-h').textContent = '0 %';
+  // Ancrer le x/y de départ
+  lastCoords.x = parseFloat(fmt(c.x));
+  lastCoords.y = parseFloat(fmt(c.y));
+}
+
+function onMouseUp() { dragStart = null; }
+
+function attachTrackers() {
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mousedown', onMouseDown);
+  document.addEventListener('mouseup',   onMouseUp);
+}
+
+function detachTrackers() {
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mousedown', onMouseDown);
+  document.removeEventListener('mouseup',   onMouseUp);
+}
+
+function copyCoords() {
+  const c = lastCoords;
+  if (!c.page) return;
+  const snippet =
+`{ page: ${c.page}, x: ${c.x}, y: ${c.y}, w: ${c.w || 20}, h: ${c.h || 5},\n  tip: '→ ', href: '' }`;
+  navigator.clipboard.writeText(snippet).then(() => {
+    const btn = document.getElementById('cp-copy-btn');
+    btn.textContent = '✓ Copié !';
+    setTimeout(() => btn.textContent = 'Copier comme hotspot', 1500);
   });
 }
 
