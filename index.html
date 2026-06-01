@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wedoo Motion — Newsletter Mai 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Lato', sans-serif;
+    background: #fff;
+    color: #222;
+    min-height: 100vh;
+  }
+
+  /* ── TOOLBAR MINIMALISTE ── */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid #e8e8e8;
+    padding: 0.6rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .toolbar-title {
+    font-size: 0.82rem;
+    color: #888;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  .toolbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tbtn {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 0.28rem 0.75rem;
+    font-size: 0.78rem;
+    font-family: 'Lato', sans-serif;
+    color: #444;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tbtn:hover { background: #f5f5f5; border-color: #bbb; }
+
+  .page-counter {
+    font-size: 0.78rem;
+    color: #aaa;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  /* ── VIEWER ── */
+  #viewer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 1rem 4rem;
+    gap: 2.5rem;
+    background: #f0f0f0;
+  }
+
+  /* ── PAGE BLOCK ── */
+  .page-block {
+    position: relative;
+    background: white;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.13);
+  }
+
+  .page-block canvas { display: block; }
+
+  /* ── HOTSPOT ── */
+  .hs {
+    position: absolute;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 3px;
+    transition: background 0.15s;
+  }
+
+  .hs:hover { background: rgba(255, 140, 0, 0.15) !important; outline: 2px solid rgba(255,140,0,0.5); }
+
+  .hs-tip {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #222;
+    color: #fff;
+    font-size: 0.7rem;
+    font-family: 'Lato', sans-serif;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 20;
+  }
+
+  .hs:hover .hs-tip { opacity: 1; }
+
+  /* ── LOADING ── */
+  #loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    color: #aaa;
+    font-size: 0.85rem;
+  }
+
+  .spin {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #eee;
+    border-top-color: #F08C00;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DEBUG TOGGLE ── */
+  #debug-bar {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 200;
+  }
+
+  #debug-btn {
+    background: #222;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.72rem;
+    font-family: 'Lato', sans-serif;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.15s;
+  }
+
+  #debug-btn:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOOLBAR ══ -->
+<div class="toolbar">
+  <span class="toolbar-title">Wedoo Motion — Newsletter Mai 2026</span>
+  <div class="toolbar-nav">
+    <button class="tbtn" onclick="goPrev()">← Préc.</button>
+    <span class="page-counter" id="pg-counter">— / —</span>
+    <button class="tbtn" onclick="goNext()">Suiv. →</button>
+    <button class="tbtn" onclick="doZoom(-0.25)">− Zoom</button>
+    <span id="zoom-lbl" style="font-size:0.75rem;color:#aaa;min-width:36px;text-align:center;">100%</span>
+    <button class="tbtn" onclick="doZoom(+0.25)">+ Zoom</button>
+  </div>
+</div>
+
+<!-- ══ VIEWER ══ -->
+<div id="viewer">
+  <div id="loading">
+    <div class="spin"></div>
+    <span>Chargement de la newsletter…</span>
+  </div>
+</div>
+
+<!-- ══ DEBUG ══ -->
+<div id="debug-bar">
+  <button id="debug-btn" onclick="toggleDebug()">Afficher zones</button>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ─── URL DU PDF ───────────────────────────────────────────────────────────────
+// Le PDF doit être dans le même dossier que ce fichier HTML
+const PDF_URL = 'Wedoo-motion-nl-doc1.pdf';
+
+// ─── HOTSPOTS ────────────────────────────────────────────────────────────────
+//  page : numéro (1-based)
+//  x,y  : position depuis coin haut-gauche en % de la page rendue
+//  w,h  : taille en %
+//  tip  : tooltip au survol
+//  href : URL externe, ou "pdf:nom.pdf" pour ouvrir un PDF dans le viewer
+// ─────────────────────────────────────────────────────────────────────────────
+const HOTSPOTS = [
+
+  // ── PAGE 1 ──
+  // Bouton "DÉCOUVRIR" du haut (procès Brancusi)
+  {
+    page: 1,
+    x: 43, y: 74.5, w: 22, h: 5.5,
+    tip: '→ Le procès Brancusi (article)',
+    href: 'https://artemisiaonline.com/2022/02/02/loiseau-dans-lespace-de-brancusi-ou-le-proces-de-lart-moderne/srsltid=AfmBOooLKP36fRaN0HQ90vpxoDfy6Na66uixUw5VkiSsIUF_BNyrqi1'
+  },
+
+  // Bouton "DÉCOUVRIR" du bas (radio France Inter)
+  {
+    page: 1,
+    x: 43, y: 90.5, w: 22, h: 5.5,
+    tip: '→ Écouter sur France Inter',
+    href: 'https://www.radiofrance.fr/franceinter/podcasts/affaires-sensibles/affaires-sensibles-du-mardi-13-mai-2025-3895995'
+  },
+
+  // ── PAGE 4 ──
+  // "Clique pour lire la suite !" → entraide.pdf
+  {
+    page: 4,
+    x: 5, y: 62, w: 45, h: 7,
+    tip: '→ Lire la suite (PDF)',
+    href: 'pdf:entraide.pdf'
+  },
+
+  // "« La végétalisation atténue la mortalité liée à la chaleur à Paris »\nClique pour lire l'article !"
+  {
+    page: 4,
+    x: 5, y: 88, w: 90, h: 9,
+    tip: '→ Lire l\'article (Nature)',
+    href: 'https://www.nature.com/articles/s42949-025-00334-5'
+  },
+
+  // Bouton références → reference.pdf  (placé à côté du lien article, colonne droite bas page 4)
+  {
+    page: 4,
+    x: 52, y: 62, w: 43, h: 7,
+    tip: '→ Voir les références (PDF)',
+    href: 'pdf:reference.pdf'
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+let pdfDoc   = null;
+let scale    = 1.5;
+let debugOn  = false;
+
+async function init() {
+  try {
+    pdfDoc = await pdfjsLib.getDocument(PDF_URL).promise;
+    await renderAll();
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<p style="color:#c0392b;max-width:420px;text-align:center;line-height:1.6">
+        ⚠ Impossible de charger le PDF.<br>
+        <small style="color:#aaa">${e.message}</small><br><br>
+        <span style="color:#888;font-size:0.8rem">
+          Assurez-vous que <code>Wedoo-motion-nl-doc1.pdf</code> est dans le même dossier que ce fichier HTML,
+          et ouvrez via un serveur local (ex : VS Code Live Server).
+        </span>
+      </p>`;
+  }
+}
+
+async function renderAll() {
+  const viewer = document.getElementById('viewer');
+  viewer.innerHTML = '';
+
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const vp   = page.getViewport({ scale });
+
+    const block = document.createElement('div');
+    block.className = 'page-block';
+    block.id = `p${i}`;
+    block.style.width  = vp.width  + 'px';
+    block.style.height = vp.height + 'px';
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = vp.width;
+    canvas.height = vp.height;
+    block.appendChild(canvas);
+    viewer.appendChild(block);
+
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+    // Hotspots pour cette page
+    HOTSPOTS.filter(h => h.page === i).forEach(h => {
+      const el = document.createElement('div');
+      el.className = 'hs';
+      el.style.left   = h.x + '%';
+      el.style.top    = h.y + '%';
+      el.style.width  = h.w + '%';
+      el.style.height = h.h + '%';
+      el.style.background = debugOn ? 'rgba(255,140,0,0.12)' : 'transparent';
+      if (debugOn) el.style.outline = '1.5px dashed rgba(255,140,0,0.45)';
+
+      const tip = document.createElement('div');
+      tip.className = 'hs-tip';
+      tip.textContent = h.tip;
+      el.appendChild(tip);
+
+      el.addEventListener('click', () => {
+        if (h.href.startsWith('pdf:')) {
+          const pdfName = h.href.slice(4);
+          openExtPdf(pdfName);
+        } else {
+          window.open(h.href, '_blank', 'noopener');
+        }
+      });
+
+      block.appendChild(el);
+    });
+  }
+
+  updateCounter();
+}
+
+function openExtPdf(name) {
+  // Ouvre le PDF lié dans un nouvel onglet
+  window.open(name, '_blank');
+}
+
+function updateCounter() {
+  if (!pdfDoc) return;
+  const blocks = document.querySelectorAll('.page-block');
+  let cur = 1;
+  blocks.forEach((b, i) => {
+    if (b.getBoundingClientRect().top <= window.innerHeight * 0.6) cur = i + 1;
+  });
+  document.getElementById('pg-counter').textContent = `${cur} / ${pdfDoc.numPages}`;
+}
+
+function scrollTo(n) {
+  const el = document.getElementById(`p${n}`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function goPrev() {
+  const blocks = document.querySelectorAll('.page-block');
+  let cur = 1;
+  blocks.forEach((b, i) => {
+    if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) cur = i + 1;
+  });
+  if (cur > 1) scrollTo(cur - 1);
+}
+
+function goNext() {
+  const blocks = document.querySelectorAll('.page-block');
+  let cur = 1;
+  blocks.forEach((b, i) => {
+    if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) cur = i + 1;
+  });
+  if (cur < blocks.length) scrollTo(cur + 1);
+}
+
+async function doZoom(delta) {
+  scale = Math.max(0.5, Math.min(3, scale + delta));
+  document.getElementById('zoom-lbl').textContent = Math.round(scale / 1.5 * 100) + '%';
+  if (pdfDoc) await renderAll();
+}
+
+function toggleDebug() {
+  debugOn = !debugOn;
+  document.getElementById('debug-btn').textContent = debugOn ? 'Masquer zones' : 'Afficher zones';
+  document.querySelectorAll('.hs').forEach(el => {
+    el.style.background = debugOn ? 'rgba(255,140,0,0.12)' : 'transparent';
+    el.style.outline    = debugOn ? '1.5px dashed rgba(255,140,0,0.45)' : 'none';
+  });
+}
+
+window.addEventListener('scroll', updateCounter, { passive: true });
+
+init();
+</script>
+</body>
+</html>
