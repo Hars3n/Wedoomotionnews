@@ -6,67 +6,55 @@
 <title>Wedoo Motion — Newsletter Mai 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Lato', sans-serif;
-    background: #fff;
-    color: #222;
+    background: #e8e8e8;
     min-height: 100vh;
   }
 
-  /* ── TOOLBAR MINIMALISTE ── */
+  /* ── TOOLBAR NAVIGATION SEULE ── */
   .toolbar {
     position: sticky;
     top: 0;
     z-index: 100;
     background: #fff;
-    border-bottom: 1px solid #e8e8e8;
-    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0.5rem 1.25rem;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .toolbar-title {
-    font-size: 0.82rem;
-    color: #888;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 400;
-  }
-
-  .toolbar-nav {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.75rem;
   }
 
   .tbtn {
     background: none;
     border: 1px solid #ddd;
     border-radius: 5px;
-    padding: 0.28rem 0.75rem;
-    font-size: 0.78rem;
-    font-family: 'Lato', sans-serif;
+    padding: 0.28rem 0.85rem;
+    font-size: 0.8rem;
+    font-family: system-ui, sans-serif;
     color: #444;
     cursor: pointer;
     transition: background 0.1s, border-color 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
   }
 
   .tbtn:hover { background: #f5f5f5; border-color: #bbb; }
 
-  .page-counter {
+  .pg-sep {
     font-size: 0.78rem;
-    color: #aaa;
-    min-width: 70px;
+    color: #bbb;
+    min-width: 60px;
     text-align: center;
+    font-family: system-ui, sans-serif;
+  }
+
+  .zoom-lbl {
+    font-size: 0.75rem;
+    color: #bbb;
+    min-width: 40px;
+    text-align: center;
+    font-family: system-ui, sans-serif;
   }
 
   /* ── VIEWER ── */
@@ -74,19 +62,22 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2.5rem 1rem 4rem;
-    gap: 2.5rem;
-    background: #f0f0f0;
+    padding: 2rem 1rem 5rem;
+    gap: 2rem;
   }
 
   /* ── PAGE BLOCK ── */
   .page-block {
     position: relative;
     background: white;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.13);
+    box-shadow: 0 3px 20px rgba(0,0,0,0.15);
+    /* Le canvas est rendu à devicePixelRatio×, on le rétrecit via CSS */
   }
 
-  .page-block canvas { display: block; }
+  .page-block canvas {
+    display: block;
+    /* width/height CSS = taille d'affichage (≠ résolution interne) */
+  }
 
   /* ── HOTSPOT ── */
   .hs {
@@ -94,21 +85,21 @@
     cursor: pointer;
     z-index: 10;
     border-radius: 3px;
-    transition: background 0.15s;
+    transition: background 0.12s;
   }
 
-  .hs:hover { background: rgba(255, 140, 0, 0.15) !important; outline: 2px solid rgba(255,140,0,0.5); }
+  .hs:hover { background: rgba(0,160,140,0.18) !important; }
 
   .hs-tip {
     position: absolute;
     bottom: calc(100% + 5px);
     left: 50%;
     transform: translateX(-50%);
-    background: #222;
+    background: #111;
     color: #fff;
     font-size: 0.7rem;
-    font-family: 'Lato', sans-serif;
-    padding: 3px 8px;
+    font-family: system-ui, sans-serif;
+    padding: 3px 9px;
     border-radius: 4px;
     white-space: nowrap;
     pointer-events: none;
@@ -125,231 +116,80 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 60vh;
+    min-height: 70vh;
     gap: 1rem;
     color: #aaa;
     font-size: 0.85rem;
+    font-family: system-ui, sans-serif;
   }
 
   .spin {
-    width: 28px;
-    height: 28px;
-    border: 2px solid #eee;
-    border-top-color: #F08C00;
+    width: 28px; height: 28px;
+    border: 2px solid #ddd;
+    border-top-color: #00A08C;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }
 
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── DEBUG TOGGLE ── */
-  #debug-bar {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 200;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.5rem;
-  }
-
-  #debug-btn {
-    background: #222;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 0.4rem 0.9rem;
-    font-size: 0.72rem;
-    font-family: 'Lato', sans-serif;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.15s;
-  }
-
-  #debug-btn:hover { opacity: 1; }
-
-  /* ── PANNEAU COORDONNÉES ── */
-  #coord-panel {
-    display: none;
-    background: #111;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    font-size: 0.72rem;
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    min-width: 230px;
-    line-height: 1.8;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
-
-  #coord-panel.visible { display: block; }
-
-  #coord-panel .cp-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  #coord-panel .cp-label { color: #F08C00; }
-  #coord-panel .cp-val   { color: #fff; font-weight: bold; }
-
-  #coord-panel .cp-divider {
-    border: none;
-    border-top: 1px solid rgba(255,255,255,0.12);
-    margin: 0.4rem 0;
-  }
-
-  #coord-panel .cp-hint {
-    color: #666;
-    font-size: 0.65rem;
-    margin-top: 0.4rem;
-    font-family: 'Lato', sans-serif;
-  }
-
-  #coord-panel .cp-copy {
-    display: block;
-    width: 100%;
-    margin-top: 0.6rem;
-    background: rgba(255,140,0,0.15);
-    border: 1px solid rgba(255,140,0,0.4);
-    border-radius: 4px;
-    color: #F08C00;
-    font-family: 'Lato', sans-serif;
-    font-size: 0.68rem;
-    padding: 0.3rem;
-    cursor: pointer;
-    transition: background 0.1s;
-    text-align: center;
-  }
-
-  #coord-panel .cp-copy:hover { background: rgba(255,140,0,0.28); }
-
-  /* Crosshair quand debug actif */
-  body.debug-mode .page-block { cursor: crosshair; }
-
-  /* Réticule live */
-  #crosshair-h, #crosshair-v {
-    position: fixed;
-    pointer-events: none;
-    z-index: 500;
-    display: none;
-  }
-
-  #crosshair-h {
-    height: 1px;
-    left: 0; right: 0;
-    background: rgba(255,140,0,0.5);
-  }
-
-  #crosshair-v {
-    width: 1px;
-    top: 0; bottom: 0;
-    background: rgba(255,140,0,0.5);
-  }
-
-  body.debug-mode #crosshair-h,
-  body.debug-mode #crosshair-v { display: block; }
 </style>
 </head>
 <body>
 
 <!-- ══ TOOLBAR ══ -->
 <div class="toolbar">
-  <span class="toolbar-title">Wedoo Motion — Newsletter Mai 2026</span>
-  <div class="toolbar-nav">
-    <button class="tbtn" onclick="goPrev()">← Préc.</button>
-    <span class="page-counter" id="pg-counter">— / —</span>
-    <button class="tbtn" onclick="goNext()">Suiv. →</button>
-    <button class="tbtn" onclick="doZoom(-0.25)">− Zoom</button>
-    <span id="zoom-lbl" style="font-size:0.75rem;color:#aaa;min-width:36px;text-align:center;">100%</span>
-    <button class="tbtn" onclick="doZoom(+0.25)">+ Zoom</button>
-  </div>
+  <button class="tbtn" onclick="goPrev()">← Préc.</button>
+  <span class="pg-sep" id="pg-counter">— / —</span>
+  <button class="tbtn" onclick="goNext()">Suiv. →</button>
+  <span style="width:1px;height:18px;background:#e0e0e0;display:inline-block;margin:0 0.25rem"></span>
+  <button class="tbtn" onclick="doZoom(-0.5)">− Zoom</button>
+  <span class="zoom-lbl" id="zoom-lbl">100%</span>
+  <button class="tbtn" onclick="doZoom(+0.5)">+ Zoom</button>
 </div>
 
 <!-- ══ VIEWER ══ -->
 <div id="viewer">
   <div id="loading">
     <div class="spin"></div>
-    <span>Chargement de la newsletter…</span>
+    <span>Chargement…</span>
   </div>
-</div>
-
-<!-- Réticule -->
-<div id="crosshair-h"></div>
-<div id="crosshair-v"></div>
-
-<!-- ══ DEBUG ══ -->
-<div id="debug-bar">
-  <div id="coord-panel">
-    <div class="cp-row"><span class="cp-label">Page</span><span class="cp-val" id="cp-page">—</span></div>
-    <hr class="cp-divider">
-    <div class="cp-row"><span class="cp-label">x (gauche)</span><span class="cp-val" id="cp-x">—</span></div>
-    <div class="cp-row"><span class="cp-label">y (haut)</span><span class="cp-val" id="cp-y">—</span></div>
-    <hr class="cp-divider">
-    <div class="cp-row" id="cp-drag-row" style="display:none"><span class="cp-label">w (largeur)</span><span class="cp-val" id="cp-w">—</span></div>
-    <div class="cp-row" id="cp-drag-row2" style="display:none"><span class="cp-label">h (hauteur)</span><span class="cp-val" id="cp-h">—</span></div>
-    <p class="cp-hint">↖ Survole pour x,y · Clique-glisse pour w,h</p>
-    <button class="cp-copy" id="cp-copy-btn" onclick="copyCoords()">Copier comme hotspot</button>
-  </div>
-  <button id="debug-btn" onclick="toggleDebug()">Afficher zones</button>
 </div>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ─── URL DU PDF ───────────────────────────────────────────────────────────────
-// Le PDF doit être dans le même dossier que ce fichier HTML
 const PDF_URL = 'Wedoo-motion-nl-doc1.pdf';
 
 // ─── HOTSPOTS ────────────────────────────────────────────────────────────────
-//  page : numéro (1-based)
-//  x,y  : position depuis coin haut-gauche en % de la page rendue
-//  w,h  : taille en %
-//  tip  : tooltip au survol
-//  href : URL externe, ou "pdf:nom.pdf" pour ouvrir un PDF dans le viewer
-// ─────────────────────────────────────────────────────────────────────────────
 const HOTSPOTS = [
-
-  // ── PAGE 1 ──
-  // Bouton "DÉCOUVRIR" rouge — procès Brancusi
+  // PAGE 1 — Bouton DÉCOUVRIR rouge (procès Brancusi)
   {
-    page: 1,
-    x: 5, y: 50.5, w: 38, h: 4,
+    page: 1, x: 5, y: 50.5, w: 38, h: 4,
     tip: '→ Le procès Brancusi (article)',
     href: 'https://artemisiaonline.com/2022/02/02/loiseau-dans-lespace-de-brancusi-ou-le-proces-de-lart-moderne/srsltid=AfmBOooLKP36fRaN0HQ90vpxoDfy6Na66uixUw5VkiSsIUF_BNyrqi1'
   },
-
-  // Bouton "DÉCOUVRIR" noir — France Inter
+  // PAGE 1 — Bouton DÉCOUVRIR noir (France Inter)
   {
-    page: 1,
-    x: 5, y: 54.5, w: 38, h: 4,
+    page: 1, x: 5, y: 54.5, w: 38, h: 4,
     tip: '→ Écouter sur France Inter',
     href: 'https://www.radiofrance.fr/franceinter/podcasts/affaires-sensibles/affaires-sensibles-du-mardi-13-mai-2025-3895995'
   },
-
-  // ── PAGE 4 ──
-  // "Clique pour lire la suite !" → entraide.pdf
+  // PAGE 4 — "Clique pour lire la suite !" → entraide.pdf
   {
-    page: 4,
-    x: 5, y: 62, w: 45, h: 7,
+    page: 4, x: 5, y: 62, w: 45, h: 7,
     tip: '→ Lire la suite (PDF)',
     href: 'pdf:entraide.pdf'
   },
-
-  // "« La végétalisation atténue la mortalité liée à la chaleur à Paris »\nClique pour lire l'article !"
+  // PAGE 4 — Article végétalisation Paris → Nature
   {
-    page: 4,
-    x: 5, y: 88, w: 90, h: 9,
+    page: 4, x: 5, y: 88, w: 90, h: 9,
     tip: '→ Lire l\'article (Nature)',
     href: 'https://www.nature.com/articles/s42949-025-00334-5'
   },
-
-  // Bouton références → reference.pdf  (placé à côté du lien article, colonne droite bas page 4)
+  // PAGE 4 — Références → reference.pdf
   {
-    page: 4,
-    x: 52, y: 62, w: 43, h: 7,
+    page: 4, x: 52, y: 62, w: 43, h: 7,
     tip: '→ Voir les références (PDF)',
     href: 'pdf:reference.pdf'
   },
@@ -357,9 +197,11 @@ const HOTSPOTS = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-let pdfDoc   = null;
-let scale    = 1.5;
-let debugOn  = false;
+let pdfDoc = null;
+// Échelle de base × devicePixelRatio pour rendu haute résolution
+// On vise ~900px de large affiché ; le canvas interne sera 2× ou 3× selon l'écran
+const BASE_DISPLAY_WIDTH = 900; // px affiché dans le navigateur
+let zoomFactor = 1.0;           // modifié par les boutons
 
 async function init() {
   try {
@@ -367,12 +209,11 @@ async function init() {
     await renderAll();
   } catch(e) {
     document.getElementById('loading').innerHTML =
-      `<p style="color:#c0392b;max-width:420px;text-align:center;line-height:1.6">
+      `<p style="color:#c0392b;max-width:420px;text-align:center;line-height:1.7;font-family:system-ui,sans-serif">
         ⚠ Impossible de charger le PDF.<br>
         <small style="color:#aaa">${e.message}</small><br><br>
-        <span style="color:#888;font-size:0.8rem">
-          Assurez-vous que <code>Wedoo-motion-nl-doc1.pdf</code> est dans le même dossier que ce fichier HTML,
-          et ouvrez via un serveur local (ex : VS Code Live Server).
+        <span style="color:#999;font-size:0.8rem">
+          Placez <code>Wedoo-motion-nl-doc1.pdf</code> dans le même dossier et ouvrez via un serveur local.
         </span>
       </p>`;
   }
@@ -382,25 +223,40 @@ async function renderAll() {
   const viewer = document.getElementById('viewer');
   viewer.innerHTML = '';
 
-  for (let i = 1; i <= pdfDoc.numPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const vp   = page.getViewport({ scale });
+  const dpr = window.devicePixelRatio || 1;
 
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page     = await pdfDoc.getPage(i);
+    // Calcul de l'échelle : on veut BASE_DISPLAY_WIDTH * zoomFactor px affichés,
+    // mais on rend en interne à dpr× pour avoir un rendu net
+    const vpNatural  = page.getViewport({ scale: 1 });
+    const displayW   = BASE_DISPLAY_WIDTH * zoomFactor;
+    const cssScale   = displayW / vpNatural.width;
+    const renderScale = cssScale * dpr;
+
+    const vp = page.getViewport({ scale: renderScale });
+
+    // Bloc — taille CSS = taille affichée
     const block = document.createElement('div');
     block.className = 'page-block';
     block.id = `p${i}`;
-    block.style.width  = vp.width  + 'px';
-    block.style.height = vp.height + 'px';
+    block.style.width  = (vp.width  / dpr) + 'px';
+    block.style.height = (vp.height / dpr) + 'px';
 
+    // Canvas — résolution interne haute densité
     const canvas = document.createElement('canvas');
     canvas.width  = vp.width;
     canvas.height = vp.height;
+    // On le force à la taille CSS pour que le navigateur le downscale proprement
+    canvas.style.width  = (vp.width  / dpr) + 'px';
+    canvas.style.height = (vp.height / dpr) + 'px';
     block.appendChild(canvas);
     viewer.appendChild(block);
 
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
 
-    // Hotspots pour cette page
+    // Hotspots
     HOTSPOTS.filter(h => h.page === i).forEach(h => {
       const el = document.createElement('div');
       el.className = 'hs';
@@ -408,8 +264,6 @@ async function renderAll() {
       el.style.top    = h.y + '%';
       el.style.width  = h.w + '%';
       el.style.height = h.h + '%';
-      el.style.background = debugOn ? 'rgba(255,140,0,0.12)' : 'transparent';
-      if (debugOn) el.style.outline = '1.5px dashed rgba(255,140,0,0.45)';
 
       const tip = document.createElement('div');
       tip.className = 'hs-tip';
@@ -417,12 +271,8 @@ async function renderAll() {
       el.appendChild(tip);
 
       el.addEventListener('click', () => {
-        if (h.href.startsWith('pdf:')) {
-          const pdfName = h.href.slice(4);
-          openExtPdf(pdfName);
-        } else {
-          window.open(h.href, '_blank', 'noopener');
-        }
+        if (h.href.startsWith('pdf:')) window.open(h.href.slice(4), '_blank');
+        else window.open(h.href, '_blank', 'noopener');
       });
 
       block.appendChild(el);
@@ -432,17 +282,12 @@ async function renderAll() {
   updateCounter();
 }
 
-function openExtPdf(name) {
-  // Ouvre le PDF lié dans un nouvel onglet
-  window.open(name, '_blank');
-}
-
 function updateCounter() {
   if (!pdfDoc) return;
   const blocks = document.querySelectorAll('.page-block');
   let cur = 1;
   blocks.forEach((b, i) => {
-    if (b.getBoundingClientRect().top <= window.innerHeight * 0.6) cur = i + 1;
+    if (b.getBoundingClientRect().top <= window.innerHeight * 0.55) cur = i + 1;
   });
   document.getElementById('pg-counter').textContent = `${cur} / ${pdfDoc.numPages}`;
 }
@@ -455,132 +300,24 @@ function scrollTo(n) {
 function goPrev() {
   const blocks = document.querySelectorAll('.page-block');
   let cur = 1;
-  blocks.forEach((b, i) => {
-    if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) cur = i + 1;
-  });
+  blocks.forEach((b, i) => { if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) cur = i + 1; });
   if (cur > 1) scrollTo(cur - 1);
 }
 
 function goNext() {
   const blocks = document.querySelectorAll('.page-block');
   let cur = 1;
-  blocks.forEach((b, i) => {
-    if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) cur = i + 1;
-  });
+  blocks.forEach((b, i) => { if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) cur = i + 1; });
   if (cur < blocks.length) scrollTo(cur + 1);
 }
 
 async function doZoom(delta) {
-  scale = Math.max(0.5, Math.min(3, scale + delta));
-  document.getElementById('zoom-lbl').textContent = Math.round(scale / 1.5 * 100) + '%';
+  zoomFactor = Math.max(0.4, Math.min(2.5, zoomFactor + delta));
+  document.getElementById('zoom-lbl').textContent = Math.round(zoomFactor * 100) + '%';
   if (pdfDoc) await renderAll();
 }
 
-function toggleDebug() {
-  debugOn = !debugOn;
-  document.getElementById('debug-btn').textContent = debugOn ? 'Masquer zones' : 'Afficher zones';
-  document.getElementById('coord-panel').classList.toggle('visible', debugOn);
-  document.body.classList.toggle('debug-mode', debugOn);
-
-  document.querySelectorAll('.hs').forEach(el => {
-    el.style.background = debugOn ? 'rgba(255,140,0,0.12)' : 'transparent';
-    el.style.outline    = debugOn ? '1.5px dashed rgba(255,140,0,0.45)' : 'none';
-  });
-
-  if (debugOn) attachTrackers();
-  else detachTrackers();
-}
-
-// ── Suivi coordonnées ─────────────────────────────────────────────────────────
-
-let dragStart = null;
-let lastCoords = { page: null, x: 0, y: 0, w: 0, h: 0 };
-
-function getPageCoords(e) {
-  const blocks = document.querySelectorAll('.page-block');
-  for (let i = 0; i < blocks.length; i++) {
-    const b   = blocks[i];
-    const r   = b.getBoundingClientRect();
-    if (e.clientX >= r.left && e.clientX <= r.right &&
-        e.clientY >= r.top  && e.clientY <= r.bottom) {
-      const xPct = ((e.clientX - r.left) / r.width  * 100);
-      const yPct = ((e.clientY - r.top)  / r.height * 100);
-      return { page: i + 1, x: xPct, y: yPct, block: b };
-    }
-  }
-  return null;
-}
-
-function fmt(v) { return v.toFixed(1); }
-
-function onMouseMove(e) {
-  // Réticule
-  document.getElementById('crosshair-h').style.top  = e.clientY + 'px';
-  document.getElementById('crosshair-v').style.left = e.clientX + 'px';
-
-  const c = getPageCoords(e);
-  if (!c) return;
-
-  document.getElementById('cp-page').textContent = `Page ${c.page}`;
-  document.getElementById('cp-x').textContent    = fmt(c.x) + ' %';
-  document.getElementById('cp-y').textContent    = fmt(c.y) + ' %';
-  lastCoords.page = c.page;
-  lastCoords.x    = parseFloat(fmt(c.x));
-  lastCoords.y    = parseFloat(fmt(c.y));
-
-  // Si on est en train de glisser, afficher w/h
-  if (dragStart && dragStart.page === c.page) {
-    const w = Math.abs(c.x - dragStart.x);
-    const h = Math.abs(c.y - dragStart.y);
-    document.getElementById('cp-w').textContent = fmt(w) + ' %';
-    document.getElementById('cp-h').textContent = fmt(h) + ' %';
-    lastCoords.w = parseFloat(fmt(w));
-    lastCoords.h = parseFloat(fmt(h));
-  }
-}
-
-function onMouseDown(e) {
-  if (!debugOn) return;
-  const c = getPageCoords(e);
-  if (!c) return;
-  dragStart = { page: c.page, x: c.x, y: c.y };
-  document.getElementById('cp-drag-row').style.display  = 'flex';
-  document.getElementById('cp-drag-row2').style.display = 'flex';
-  document.getElementById('cp-w').textContent = '0 %';
-  document.getElementById('cp-h').textContent = '0 %';
-  // Ancrer le x/y de départ
-  lastCoords.x = parseFloat(fmt(c.x));
-  lastCoords.y = parseFloat(fmt(c.y));
-}
-
-function onMouseUp() { dragStart = null; }
-
-function attachTrackers() {
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mousedown', onMouseDown);
-  document.addEventListener('mouseup',   onMouseUp);
-}
-
-function detachTrackers() {
-  document.removeEventListener('mousemove', onMouseMove);
-  document.removeEventListener('mousedown', onMouseDown);
-  document.removeEventListener('mouseup',   onMouseUp);
-}
-
-function copyCoords() {
-  const c = lastCoords;
-  if (!c.page) return;
-  const snippet =
-`{ page: ${c.page}, x: ${c.x}, y: ${c.y}, w: ${c.w || 20}, h: ${c.h || 5},\n  tip: '→ ', href: '' }`;
-  navigator.clipboard.writeText(snippet).then(() => {
-    const btn = document.getElementById('cp-copy-btn');
-    btn.textContent = '✓ Copié !';
-    setTimeout(() => btn.textContent = 'Copier comme hotspot', 1500);
-  });
-}
-
 window.addEventListener('scroll', updateCounter, { passive: true });
-
 init();
 </script>
 </body>
