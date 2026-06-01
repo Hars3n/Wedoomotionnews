@@ -165,6 +165,8 @@
 
 <!-- ══ TOOLBAR ══ -->
 <div class="toolbar">
+  <img id="nav-logo" src="logo-wedoo.png" alt="Wedoo Motion"
+       style="height:36px;width:auto;object-fit:contain;margin-right:0.5rem;transition:opacity 0.3s;">
   <button class="tbtn" onclick="goPrev()">← Préc.</button>
   <span class="pg-sep" id="pg-counter">— / —</span>
   <button class="tbtn" onclick="goNext()">Suiv. →</button>
@@ -319,6 +321,17 @@ function updateCounter() {
     if (b.getBoundingClientRect().top <= window.innerHeight * 0.55) cur = i + 1;
   });
   document.getElementById('pg-counter').textContent = `${cur} / ${pdfDoc.numPages}`;
+
+  // Swap logo selon la page courante
+  const logo = document.getElementById('nav-logo');
+  const newSrc = (cur === 2 || cur === 3) ? 'logo2-wedoo.png' : 'logo-wedoo.png';
+  if (!logo.src.endsWith(newSrc)) {
+    logo.style.opacity = '0';
+    setTimeout(() => {
+      logo.src = newSrc;
+      logo.style.opacity = '1';
+    }, 150);
+  }
 }
 
 function scrollTo(n) {
